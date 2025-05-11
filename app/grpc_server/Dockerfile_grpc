@@ -1,0 +1,36 @@
+###########
+# BUILDER #
+###########
+
+FROM python:3.12.2-alpine AS builder_grpc
+
+WORKDIR /usr/src/grpc
+
+RUN apk update && apk add --no-cache gcc musl-dev python3-dev
+
+COPY ./requirements_grpc.txt .
+RUN pip install --upgrade pip
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/grpc/wheels -r requirements_grpc.txt
+
+
+########
+# GRPC #
+########
+
+FROM python:3.12.2-alpine AS grpc
+
+WORKDIR /home/grpc
+
+COPY --from=builder_grpc /usr/src/grpc/wheels /wheels
+RUN pip install --no-cache /wheels/*
+
+COPY . ./grpc_server
+
+RUN addgroup -S grpc \
+    && adduser -S grpc -G grpc
+RUN chown -R grpc:grpc .
+USER grpc
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/home/grpc
