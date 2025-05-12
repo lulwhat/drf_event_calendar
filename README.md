@@ -27,7 +27,7 @@ Full task description for the API: [task_description.docx](/task_description.doc
 
 <br/>
 
-**Note:** By default DB is prepopulated with test data by [generate_initial_data](/fixtures/generate_initial_data.py) script -- if you want a clean DB after deployment, change GENERATE_INITIAL_DATA parameter to False in [.env](.env)
+**Note:** By default DB is prepopulated with test data by [generate_initial_data](/app/fixtures/generate_initial_data.py) script -- if you want a clean DB after deployment, change GENERATE_INITIAL_DATA parameter to False in [.env](.env)
 
 <br/><br/>
 
