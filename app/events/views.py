@@ -5,13 +5,16 @@ from django.db.models import Avg
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import GenericAPIView
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from events.filters import EventFilter
 from events.models import Event, Reservation, Rating, Tag
 from events.serializers import EventSerializer, ReservationSerializer, \
-    RatingSerializer, TagSerializer
+    RatingSerializer, TagSerializer, UserLoginSerializer, \
+    UserRegisterSerializer
 from events.tasks import send_booking_notification, \
     send_cancellation_notification
 
@@ -21,6 +24,85 @@ class IsOrganizerOrReadOnly(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
         return obj.organizer == request.user
+
+
+class UserLoginView(GenericAPIView):
+    """
+    User authentication (token issuance).
+    """
+    serializer_class = UserLoginSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
+
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "Invalid credentials"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        if not user.check_password(password):
+            return Response(
+                {"error": "Invalid credentials"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+
+        return Response({
+            "access_token": str(access_token),
+            "refresh_token": str(refresh),
+            "user_id": user.pk,
+            "email": user.email,
+            "username": user.username
+        })
+
+
+class UserRegisterView(GenericAPIView):
+    """
+    Register a new user and return JWT tokens.
+    """
+    serializer_class = UserRegisterSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
+        email = serializer.validated_data.get('email', '')
+
+        if User.objects.filter(username=username).exists():
+            return Response(
+                {'error': 'Username already exists'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            email=email
+        )
+
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+
+        return Response({
+            'access_token': str(access_token),
+            'refresh_token': str(refresh),
+            'user_id': user.pk,
+            'username': user.username,
+            'email': user.email
+        }, status=status.HTTP_201_CREATED)
 
 
 class EventViewSet(viewsets.ModelViewSet):

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from celery.schedules import crontab
@@ -166,7 +167,7 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -179,6 +180,25 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
+JWT_AUTH = {
+    'JWT_EXPIRATION_DELTA': timedelta(minutes=60),
+    'JWT_ALLOW_REFRESH': True,
+    'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=1),
+}
+
+
+def custom_operations_sorter(endpoints):
+    auth_paths = ['/api/user']
+    return sorted(
+        endpoints,
+        key=lambda endpoint: (
+            0 if any(path in endpoint[0] for path in auth_paths) else 1,
+            endpoint[0],
+            endpoint[1]
+        )
+    )
+
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Events API',
     'DESCRIPTION': 'API for managing events',
@@ -188,6 +208,7 @@ SPECTACULAR_SETTINGS = {
         'withCredentials': True,
         'persistAuthorization': True,
     },
+    'TAGS_SORTER': custom_operations_sorter,
 }
 
 CELERY_BROKER_URL = 'redis://redis:6379/0'

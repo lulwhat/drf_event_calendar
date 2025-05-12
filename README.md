@@ -34,15 +34,19 @@ Full task description for the API: [task_description.docx](/task_description.doc
 
 ### To use locally run following steps:
 
-Build containers: `docker-compose up --build -d`
+**Build containers:** `docker-compose up --build -d`
 
 Check containers are up and running: `docker ps -a`
 
-Admin credentials: `admin admin`
-
 Access Swagger UI: <http://localhost/api/docs/>
 
-Shutdown the app: `docker-compose down -v --remove-orphans`
+Authentication is managed with JWT tokens. Access `/api/login` endpoint for Token issuance and use it in `Authorize`
+
+Admin credentials: `admin admin`
+
+Test users credentials: `user_{1-10} password123`
+
+**Shutdown the app:** `docker-compose down -v --remove-orphans`
 
 #### Optional:
 
